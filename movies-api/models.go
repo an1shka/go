@@ -14,4 +14,3 @@ type MovieInput struct {
 	Rating   float64 `json:"rating"`
 	Director string  `json:"director"`
 }
-

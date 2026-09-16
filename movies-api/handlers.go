@@ -25,13 +25,11 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
-// RouteHandler роутит запросы на /movies и /movies/{id}
 func (h *Handler) MovieRoutes(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/movies")
 	path = strings.Trim(path, "/")
 
 	if path == "" {
-		// Маршрут: /movies
 		switch r.Method {
 		case http.MethodGet:
 			h.GetMovies(w, r)
@@ -43,9 +41,11 @@ func (h *Handler) MovieRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Валидация ID: если передана строка не из цифр (например, /movies/abc),
+	// возвращаем 400 Bad Request
 	id, err := strconv.Atoi(path)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid movie ID")
+		writeError(w, http.StatusBadRequest, "ID must be a number")
 		return
 	}
 
@@ -77,12 +77,15 @@ func (h *Handler) GetMovieByID(w http.ResponseWriter, r *http.Request, id int) {
 
 func (h *Handler) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	var input MovieInput
+
+	// Ошибка парсинга JSON -> 400 Bad Request
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
-	if err := input.Validate(); err != nil {
+	// Ошибка валидации -> 400 Bad Request
+	if err := validateMovie(input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -93,12 +96,15 @@ func (h *Handler) CreateMovie(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request, id int) {
 	var input MovieInput
+
+	// Ошибка парсинга JSON -> 400 Bad Request
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
-	if err := input.Validate(); err != nil {
+	// Ошибка валидации -> 400 Bad Request
+	if err := validateMovie(input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

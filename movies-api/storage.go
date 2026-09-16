@@ -5,9 +5,7 @@ import (
 	"sync"
 )
 
-var (
-	ErrNotFound = errors.New("movie not found")
-)
+var ErrNotFound = errors.New("movie not found")
 
 type MemoryStorage struct {
 	mu     sync.RWMutex

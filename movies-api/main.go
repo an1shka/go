@@ -7,12 +7,13 @@ import (
 
 func main() {
 	storage := NewMemoryStorage()
-	
+
+	// Начальный фильм для демонстрации (ID = 1)
 	storage.Create(MovieInput{
-		Title:    "Inception",
-		Year:     2010,
-		Rating:   8.8,
-		Director: "Christopher Nolan",
+		Title:    "The Shawshank Redemption",
+		Year:     1994,
+		Rating:   9.3,
+		Director: "Frank Darabont",
 	})
 
 	handler := NewHandler(storage)
