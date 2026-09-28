@@ -1,0 +1,309 @@
+{
+  "info": {
+    "_postman_id": "d2b3d1c4-7e79-4d09-91d5-schoolhub-api",
+    "name": "SchoolHub API",
+    "description": "Полная коллекция для проверки SchoolHub после урока 2. Сначала выполните Auth / Login: токен сохранится в переменную token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "studentId", "value": "1" },
+    { "key": "teacherId", "value": "1" },
+    { "key": "subjectId", "value": "1" },
+    { "key": "gradeId", "value": "1" },
+    { "key": "homeworkId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"schoolhub123\"\n}" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login - invalid credentials",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrong-password\"\n}" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Create student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Елена Назарова\",\n  \"email\": \"elena@example.com\",\n  \"class_name\": \"10B\"\n}" },
+            "url": "{{baseUrl}}/students"
+          }
+        },
+        {
+          "name": "Get all students",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students" }
+        },
+        {
+          "name": "Get student by ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students/{{studentId}}" }
+        },
+        {
+          "name": "Update student",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Анна Петрова (обновлено)\",\n  \"email\": \"anna.updated@example.com\",\n  \"class_name\": \"10A\"\n}" },
+            "url": "{{baseUrl}}/students/{{studentId}}"
+          }
+        },
+        {
+          "name": "Delete student",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students/{{studentId}}" }
+        },
+        {
+          "name": "Students by class",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students?class_name=10A" }
+        },
+        {
+          "name": "Protected route without token",
+          "request": { "method": "GET", "url": "{{baseUrl}}/students" }
+        },
+        {
+          "name": "Student with non-existent ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students/9999" }
+        }
+      ]
+    },
+    {
+      "name": "Teachers",
+      "item": [
+        {
+          "name": "Create teacher",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Сергей Орлов\",\n  \"email\": \"orlov@schoolhub.local\"\n}" },
+            "url": "{{baseUrl}}/teachers"
+          }
+        },
+        {
+          "name": "Get all teachers",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/teachers" }
+        },
+        {
+          "name": "Get teacher by ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/teachers/{{teacherId}}" }
+        },
+        {
+          "name": "Update teacher",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Ольга Соколова (обновлено)\",\n  \"email\": \"sokolova.updated@schoolhub.local\"\n}" },
+            "url": "{{baseUrl}}/teachers/{{teacherId}}"
+          }
+        },
+        {
+          "name": "Delete teacher",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/teachers/{{teacherId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Subjects",
+      "item": [
+        {
+          "name": "Create subject",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Химия\",\n  \"teacher_id\": {{teacherId}}\n}" },
+            "url": "{{baseUrl}}/subjects"
+          }
+        },
+        {
+          "name": "Get all subjects",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/subjects" }
+        },
+        {
+          "name": "Get subject by ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/subjects/{{subjectId}}" }
+        },
+        {
+          "name": "Update subject",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Математика (обновлено)\",\n  \"teacher_id\": {{teacherId}}\n}" },
+            "url": "{{baseUrl}}/subjects/{{subjectId}}"
+          }
+        },
+        {
+          "name": "Delete subject",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/subjects/{{subjectId}}" }
+        },
+        {
+          "name": "Create subject - non-existent teacher",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Неизвестный предмет\",\n  \"teacher_id\": 9999\n}" },
+            "url": "{{baseUrl}}/subjects"
+          }
+        },
+        {
+          "name": "Subject with non-existent ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/subjects/9999" }
+        }
+      ]
+    },
+    {
+      "name": "Grades",
+      "item": [
+        {
+          "name": "Create grade",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"student_id\": {{studentId}},\n  \"subject_id\": {{subjectId}},\n  \"value\": 5,\n  \"date\": \"2026-09-28T10:00:00Z\",\n  \"comment\": \"Контрольная работа\"\n}" },
+            "url": "{{baseUrl}}/grades"
+          }
+        },
+        {
+          "name": "Get all grades",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/grades" }
+        },
+        {
+          "name": "Get grade by ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/grades/{{gradeId}}" }
+        },
+        {
+          "name": "Update grade",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"student_id\": {{studentId}},\n  \"subject_id\": {{subjectId}},\n  \"value\": 4,\n  \"date\": \"2026-09-28T10:00:00Z\",\n  \"comment\": \"Оценка обновлена\"\n}" },
+            "url": "{{baseUrl}}/grades/{{gradeId}}"
+          }
+        },
+        {
+          "name": "Delete grade",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/grades/{{gradeId}}" }
+        },
+        {
+          "name": "Grades by student",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students/{{studentId}}/grades" }
+        },
+        {
+          "name": "Grades by student and subject",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/students/{{studentId}}/grades?subject_id={{subjectId}}" }
+        },
+        {
+          "name": "Create grade - value below 1",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"student_id\": {{studentId}},\n  \"subject_id\": {{subjectId}},\n  \"value\": 0,\n  \"comment\": \"Некорректная оценка\"\n}" },
+            "url": "{{baseUrl}}/grades"
+          }
+        },
+        {
+          "name": "Create grade - value above 5",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"student_id\": {{studentId}},\n  \"subject_id\": {{subjectId}},\n  \"value\": 6,\n  \"comment\": \"Некорректная оценка\"\n}" },
+            "url": "{{baseUrl}}/grades"
+          }
+        },
+        {
+          "name": "Grade with non-existent ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/grades/9999" }
+        }
+      ]
+    },
+    {
+      "name": "Homework",
+      "item": [
+        {
+          "name": "Create homework",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"subject_id\": {{subjectId}},\n  \"title\": \"Новая домашняя работа\",\n  \"description\": \"Выполнить упражнения 1-5\",\n  \"issued_at\": \"2026-09-28T10:00:00Z\",\n  \"deadline\": \"2026-10-05T18:00:00Z\"\n}" },
+            "url": "{{baseUrl}}/homework"
+          }
+        },
+        {
+          "name": "Get all homework",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework" }
+        },
+        {
+          "name": "Get homework by ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework/{{homeworkId}}" }
+        },
+        {
+          "name": "Update homework",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"subject_id\": {{subjectId}},\n  \"title\": \"Домашняя работа (обновлено)\",\n  \"description\": \"Обновить упражнение\",\n  \"issued_at\": \"2026-09-28T10:00:00Z\",\n  \"deadline\": \"2026-10-06T18:00:00Z\"\n}" },
+            "url": "{{baseUrl}}/homework/{{homeworkId}}"
+          }
+        },
+        {
+          "name": "Delete homework",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework/{{homeworkId}}" }
+        },
+        {
+          "name": "Homework by subject",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework?subject_id={{subjectId}}" }
+        },
+        {
+          "name": "Homework by subject route",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/subjects/{{subjectId}}/homework" }
+        },
+        {
+          "name": "Overdue homework",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework?overdue=true" }
+        },
+        {
+          "name": "Create homework - incorrect dates",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"subject_id\": {{subjectId}},\n  \"title\": \"Неверные даты\",\n  \"issued_at\": \"2026-10-10T10:00:00Z\",\n  \"deadline\": \"2026-10-01T10:00:00Z\"\n}" },
+            "url": "{{baseUrl}}/homework"
+          }
+        },
+        {
+          "name": "Homework with non-existent ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/homework/9999" }
+        }
+      ]
+    }
+  ]
+}
