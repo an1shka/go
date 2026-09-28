@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,78 +8,154 @@ import (
 )
 
 func GradesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	switch r.Method {
 	case http.MethodGet:
-		gradesMutex.Lock()
-		defer gradesMutex.Unlock()
-		json.NewEncoder(w).Encode(grades)
-
+		studentID, err := optionalQueryID(r, "student_id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid student_id")
+			return
+		}
+		subjectID, err := optionalQueryID(r, "subject_id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid subject_id")
+			return
+		}
+		gradesMutex.RLock()
+		result := make([]Grade, 0)
+		for _, grade := range grades {
+			if studentID != nil && grade.StudentID != *studentID {
+				continue
+			}
+			if subjectID != nil && grade.SubjectID != *subjectID {
+				continue
+			}
+			result = append(result, grade)
+		}
+		gradesMutex.RUnlock()
+		writeJSON(w, http.StatusOK, result)
 	case http.MethodPost:
-		var g Grade
-		if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
-			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		var grade Grade
+		if !decodeJSON(w, r, &grade) {
 			return
 		}
-
-		if g.Value < 1 || g.Value > 5 {
-			http.Error(w, `{"error": "Grade value must be between 1 and 5"}`, http.StatusBadRequest)
+		if err := validateGrade(grade); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-
-		if g.Date.IsZero() {
-			g.Date = time.Now()
+		if grade.Date.IsZero() {
+			grade.Date = time.Now().UTC()
 		}
-
 		gradesMutex.Lock()
-		g.ID = nextGradeID
+		grade.ID = nextGradeID
 		nextGradeID++
-		grades = append(grades, g)
+		grades = append(grades, grade)
 		gradesMutex.Unlock()
-
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(g)
-
+		writeJSON(w, http.StatusCreated, grade)
 	default:
-		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		methodNotAllowed(w)
 	}
 }
 
-func StudentGradesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 {
-		http.Error(w, `{"error": "Invalid URL"}`, http.StatusBadRequest)
+func GradeByIDHandler(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r.URL.Path, "/grades/")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid grade ID")
 		return
 	}
-
-	studentID, err := strconv.Atoi(parts[2])
-	if err != nil {
-		http.Error(w, `{"error": "Invalid student ID"}`, http.StatusBadRequest)
-		return
-	}
-
-	subjectIDQuery := r.URL.Query().Get("subject_id")
-
 	gradesMutex.Lock()
 	defer gradesMutex.Unlock()
-
-	var result []Grade
-	for _, g := range grades {
-		if g.StudentID == studentID {
-			if subjectIDQuery != "" {
-				subjID, _ := strconv.Atoi(subjectIDQuery)
-				if g.SubjectID == subjID {
-					result = append(result, g)
-				}
-			} else {
-				result = append(result, g)
+	for i, grade := range grades {
+		if grade.ID != id {
+			continue
+		}
+		switch r.Method {
+		case http.MethodGet:
+			writeJSON(w, http.StatusOK, grade)
+		case http.MethodPut:
+			var updated Grade
+			if !decodeJSON(w, r, &updated) {
+				return
 			}
+			if err := validateGrade(updated); err != nil {
+				writeError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			if updated.Date.IsZero() {
+				updated.Date = grade.Date
+			}
+			updated.ID = id
+			grades[i] = updated
+			writeJSON(w, http.StatusOK, updated)
+		case http.MethodDelete:
+			grades = append(grades[:i], grades[i+1:]...)
+			writeJSON(w, http.StatusOK, map[string]string{"message": "Grade deleted"})
+		default:
+			methodNotAllowed(w)
+		}
+		return
+	}
+	writeError(w, http.StatusNotFound, "grade not found")
+}
+
+func StudentGradesHandler(w http.ResponseWriter, r *http.Request) {
+	studentID, ok := pathID(strings.TrimSuffix(r.URL.Path, "/grades"), "/students/")
+	if !ok || r.Method != http.MethodGet {
+		if !ok {
+			writeError(w, http.StatusBadRequest, "invalid student ID")
+		} else {
+			methodNotAllowed(w)
+		}
+		return
+	}
+	if !studentExists(studentID) {
+		writeError(w, http.StatusNotFound, "student not found")
+		return
+	}
+	subjectID, err := optionalQueryID(r, "subject_id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid subject_id")
+		return
+	}
+	gradesMutex.RLock()
+	result := make([]Grade, 0)
+	for _, grade := range grades {
+		if grade.StudentID == studentID && (subjectID == nil || grade.SubjectID == *subjectID) {
+			result = append(result, grade)
 		}
 	}
+	gradesMutex.RUnlock()
+	writeJSON(w, http.StatusOK, result)
+}
 
-	json.NewEncoder(w).Encode(result)
+func validateGrade(grade Grade) error {
+	if grade.Value < 1 || grade.Value > 5 {
+		return &validationError{"grade value must be between 1 and 5"}
+	}
+	if !studentExists(grade.StudentID) {
+		return &validationError{"student not found"}
+	}
+	if !subjectExists(grade.SubjectID) {
+		return &validationError{"subject not found"}
+	}
+	return nil
+}
+
+func optionalQueryID(r *http.Request, name string) (*int, error) {
+	value := r.URL.Query().Get(name)
+	if value == "" {
+		return nil, nil
+	}
+	id, err := strconv.Atoi(value)
+	if err != nil || id < 1 {
+		return nil, strconv.ErrSyntax
+	}
+	return &id, nil
+}
+
+type validationError struct {
+	message string
+}
+
+func (e *validationError) Error() string {
+	return e.message
 }
