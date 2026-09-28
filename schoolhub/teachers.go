@@ -7,63 +7,90 @@ import (
 	"strings"
 )
 
-func TeachersHandler(w wWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
+func TeachersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		teachersMutex.Lock()
-		defer teachersMutex.Unlock()
-		json.NewEncoder(w).Encode(teachers)
-
+		teachersMutex.RLock()
+		result := append([]Teacher(nil), teachers...)
+		teachersMutex.RUnlock()
+		writeJSON(w, http.StatusOK, result)
 	case http.MethodPost:
-		var t Teacher
-		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
-			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		var teacher Teacher
+		if !decodeJSON(w, r, &teacher) {
 			return
 		}
-
+		if strings.TrimSpace(teacher.FullName) == "" || strings.TrimSpace(teacher.Email) == "" {
+			writeError(w, http.StatusBadRequest, "full_name and email are required")
+			return
+		}
 		teachersMutex.Lock()
-		t.ID = nextTeacherID
+		teacher.ID = nextTeacherID
 		nextTeacherID++
-		teachers = append(teachers, t)
+		teachers = append(teachers, teacher)
 		teachersMutex.Unlock()
-
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(t)
-
+		writeJSON(w, http.StatusCreated, teacher)
 	default:
-		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		methodNotAllowed(w)
 	}
 }
 
-type wWriter = http.ResponseWriter
-
 func TeacherByIDHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := strings.TrimPrefix(r.URL.Path, "/teachers/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+	id, ok := pathID(r.URL.Path, "/teachers/")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid teacher ID")
 		return
 	}
-
 	teachersMutex.Lock()
 	defer teachersMutex.Unlock()
-
-	for i, t := range teachers {
-		if t.ID == id {
-			if r.Method == http.MethodGet {
-				json.NewEncoder(w).Encode(t)
-				return
-			} else if r.Method == http.MethodDelete {
-				teachers = append(teachers[:i], teachers[i+1:]...)
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(map[string]string{"message": "Teacher deleted"})
+	for i, teacher := range teachers {
+		if teacher.ID != id {
+			continue
+		}
+		switch r.Method {
+		case http.MethodGet:
+			writeJSON(w, http.StatusOK, teacher)
+		case http.MethodPut:
+			var updated Teacher
+			if !decodeJSON(w, r, &updated) {
 				return
 			}
+			if strings.TrimSpace(updated.FullName) == "" || strings.TrimSpace(updated.Email) == "" {
+				writeError(w, http.StatusBadRequest, "full_name and email are required")
+				return
+			}
+			updated.ID = id
+			teachers[i] = updated
+			writeJSON(w, http.StatusOK, updated)
+		case http.MethodDelete:
+			teachers = append(teachers[:i], teachers[i+1:]...)
+			writeJSON(w, http.StatusOK, map[string]string{"message": "Teacher deleted"})
+		default:
+			methodNotAllowed(w)
 		}
+		return
 	}
+	writeError(w, http.StatusNotFound, "teacher not found")
+}
 
-	http.Error(w, `{"error": "Teacher not found"}`, http.StatusNotFound)
+func pathID(path, prefix string) (int, bool) {
+	value := strings.Trim(strings.TrimPrefix(path, prefix), "/")
+	if value == "" || strings.Contains(value, "/") {
+		return 0, false
+	}
+	id, err := strconv.Atoi(value)
+	return id, err == nil && id > 0
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func methodNotAllowed(w http.ResponseWriter) {
+	writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
