@@ -2,11 +2,22 @@ package main
 
 import "time"
 
-type Teacher struct {
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password,omitempty"`
+}
+
+type Student struct {
 	ID        int    `json:"id"`
 	FullName  string `json:"full_name"`
 	Email     string `json:"email"`
-	SubjectID int    `json:"subject_id,omitempty"`
+	ClassName string `json:"class_name"`
+}
+
+type Teacher struct {
+	ID       int    `json:"id"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
 }
 
 type Subject struct {
@@ -19,7 +30,7 @@ type Grade struct {
 	ID        int       `json:"id"`
 	StudentID int       `json:"student_id"`
 	SubjectID int       `json:"subject_id"`
-	Value     int       `json:"value"` // от 1 до 5
+	Value     int       `json:"value"`
 	Date      time.Time `json:"date"`
 	Comment   string    `json:"comment"`
 }
@@ -32,5 +43,3 @@ type Homework struct {
 	IssuedAt    time.Time `json:"issued_at"`
 	Deadline    time.Time `json:"deadline"`
 }
-
-
